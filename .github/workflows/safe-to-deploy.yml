@@ -1,0 +1,17 @@
+name: Veracode Safe to Deploy
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run local action
+        uses: ./
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

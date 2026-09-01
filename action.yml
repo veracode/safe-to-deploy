@@ -1,0 +1,43 @@
+name: "Veracode Safe to Deploy"
+description: "Standalone Github Action for blocking deployment"
+author: "Veracode"
+
+inputs:
+  vid:
+    description: "Veracode API ID"
+    required: false
+  vkey:
+    description: "Veracode API Key"
+    required: false
+  github_token: 
+    description: 'github_token is a token (provided by GitHub app via `github.event.client_payload.token`)'
+    required: true
+  artifacts_list:
+    description: "Comma-separated list of artifacts to check for safe-to-deploy"
+    required: true  
+  decision_mode:
+    description: "Block the deployment (enforcement mode) or record the verdict and continue (observer mode)"
+    required: true
+  repository_owner: 
+    description: 'repository_owner of original commit (provided by GitHub app via `github.event.client_payload.repository.owner`)'
+    required: true
+  repository_name: 
+    description: 'repository_name of original commit (provided by GitHub app via `github.event.client_payload.repository.name`)'
+    required: true
+  head_sha: 
+    description: 'head_sha of original commit (provided by GitHub app via `github.event.client_payload.sha`)'
+    required: false
+  repository: 
+    description: 'github.repository name'
+    required: true
+  source_branch:
+    description: 'source branch of the pull request'
+    required: true
+  pull_request:
+    description: 'Pull request number'
+    required: false
+  
+
+runs:
+  using: node24
+  main: dist/index.js
