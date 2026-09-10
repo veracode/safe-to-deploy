@@ -1,17 +1,17 @@
 {
-  "name": "safe-to-deploy",
+  "name": "veracode-gitops-deployment",
   "version": "1.0.0",
-  "description": "A GitHub Action to check if a deployment is safe based on Veracode scan results.",
-  "homepage": "https://github.com/veracode/safe-to-deploy#readme",
+  "description": "Make sure Kubernetes are running in your local machine you can use colima or docker desktop",
+  "homepage": "https://github.com/block-deploy-org/veracode-gitops-deployment#readme",
   "bugs": {
-    "url": "https://github.com/veracode/safe-to-deploy/issues"
+    "url": "https://github.com/block-deploy-org/veracode-gitops-deployment/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/veracode/safe-to-deploy.git"
+    "url": "git+https://github.com/block-deploy-org/veracode-gitops-deployment.git"
   },
-  "license": "MIT",
-  "author": "Veracode",
+  "license": "ISC",
+  "author": "Narayanan Chandran",
   "main": "index.ts",
   "scripts": {
     "build": "tsc",
@@ -19,14 +19,13 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "@actions/core": "2.0.1",
-    "@actions/github": "8.0.0",
-    "@octokit/rest": "20.0.2"
+    "@actions/core": "^2.0.1",
+  "@actions/github": "^8.0.0",
+   "@octokit/rest": "^20.0.2"
   },
   "devDependencies": {
-    "@vercel/ncc": "0.38.1",
-    "ts-loader": "9.6.2",
-    "typescript": "5.9.2",
-    "@types/node": "18.15.7"
+    "@vercel/ncc": "^0.38.1",
+    "ts-loader": "^9.6.2",
+    "typescript": "^5.9.2"
   }
 }

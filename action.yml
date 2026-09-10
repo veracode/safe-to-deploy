@@ -1,6 +1,6 @@
 name: "Veracode Safe to Deploy"
 description: "Standalone Github Action for blocking deployment"
-author: "Veracode"
+author: "Narayanan Chandran"
 
 inputs:
   vid:
@@ -10,6 +10,9 @@ inputs:
     description: "Veracode API Key"
     required: false
   github_token: 
+    description: 'github_token is a token (provided by GitHub app via `github.event.client_payload.token`)'
+    required: true
+  businessId:
     description: 'github_token is a token (provided by GitHub app via `github.event.client_payload.token`)'
     required: true
   artifacts_list:
