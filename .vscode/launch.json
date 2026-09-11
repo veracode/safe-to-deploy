@@ -1,0 +1,38 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Safe to Deploy",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--enable-source-maps"
+      ],
+      "program": "${workspaceFolder}/node_modules/tsx/dist/cli.mjs",
+      "args": [
+        "${workspaceFolder}/src/index.ts"
+      ],
+      "env": {
+        "INPUT_VID": "abcf288130564bad7a9a34e7562898a2",
+        "INPUT_VKEY": "f1c142611ee0d121b03d66f72add6f6adc9d7b04f7b0b6381e41bbbef3a84ce14f8c79e0e4422d432f4a3371d3197df61ccf76f77dc76d2c205f500d946fe5c8",
+        "INPUT_GITHUB_TOKEN": "test-token",
+        "INPUT_ARTIFACTS_LIST": "660e8400-e29b-41d4-a716-446655440010",
+        "INPUT_BUSINESSID": "b0803ce7-8e3d-421a-8126-e5a2bd0a865f",
+        //"INPUT_BUSINESSID": "660e8400-e29b-41d4-a716-446655440010",
+        //"INPUT_ARTIFACTS_LIST": "b0803ce7-8e3d-421a-8126-e5a2bd0a865f",
+        "INPUT_DECISION_MODE": "enforcement",
+        "INPUT_REPOSITORY_OWNER": "my-org",
+        "INPUT_REPOSITORY_NAME": "my-repo",
+        "INPUT_HEAD_SHA": "abc123",
+        "INPUT_REPOSITORY": "my-org/my-repo",
+        "INPUT_SOURCE_BRANCH": "feature/test",
+        "INPUT_PULL_REQUEST": "123"
+      },
+      "sourceMaps": true,
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    }
+  ]
+}

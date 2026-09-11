@@ -1,0 +1,54 @@
+name: "Veracode Safe to Deploy"
+description: "Standalone Github Action for blocking deployment"
+author: "Narayanan Chandran"
+
+inputs:
+  vid:
+    description: "Veracode API ID"
+    required: true
+  vkey:
+    description: "Veracode API Key"
+    required: true
+  github_token: 
+    description: 'github_token is a token (provided by GitHub app via `github.event.client_payload.token`)'
+    required: true
+  businessId:
+    description: 'The UUID identifier of the Business Application'
+    required: true
+  businessVersion:
+    description: 'The version of the Business Application to be deployed. This will be stored on the Decision Record for reference later.'
+    required: true
+  artifacts_list:
+    description: "The UUID identifiers of all assets to be evaluated in the current request (Array of assetSnapshotIds). This will be stored on the Decision Record for reference later."
+    required: true  
+  decision_mode:
+    description: "Block the deployment (enforcement mode) or record the verdict and continue (observer mode)"
+    required: true
+  repository_owner: 
+    description: 'repository_owner of original commit (provided by GitHub app via `github.event.client_payload.repository.owner`)'
+    required: true
+  repository_name: 
+    description: 'repository_name of original commit (provided by GitHub app via `github.event.client_payload.repository.name`)'
+    required: true
+  head_sha: 
+    description: 'head_sha of original commit (provided by GitHub app via `github.event.client_payload.sha`)'
+    required: false
+  repository: 
+    description: 'github.repository name'
+    required: true
+  source_branch:
+    description: 'source branch of the pull request'
+    required: true
+  pull_request:
+    description: 'Pull request number'
+    required: false
+
+outputs:
+  conclusion:
+    description: 'Decision outcome - "success" (SAFE), "failure" (UNSAFE, enforcement mode), or "neutral" (UNSAFE, observer mode)'
+  summary:
+    description: 'Summary of the decision details'
+
+runs:
+  using: node24
+  main: dist/index.js

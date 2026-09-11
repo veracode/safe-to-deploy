@@ -1,0 +1,35 @@
+{
+  "name": "veracode-gitops-deployment",
+  "version": "1.0.0",
+  "description": "Make sure Kubernetes are running in your local machine you can use colima or docker desktop",
+  "homepage": "https://github.com/block-deploy-org/veracode-gitops-deployment#readme",
+  "bugs": {
+    "url": "https://github.com/block-deploy-org/veracode-gitops-deployment/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/block-deploy-org/veracode-gitops-deployment.git"
+  },
+  "license": "ISC",
+  "author": "Narayanan Chandran",
+  "main": "index.ts",
+  "scripts": {
+    "build": "tsc",
+    "pack": "ncc build src/index.ts -o dist",
+    "debug": "node --inspect-brk=9229 --enable-source-maps node_modules/tsx/dist/cli.mjs src/index.ts"
+  },
+  "dependencies": {
+    "@actions/core": "^2.0.1",
+    "@actions/github": "^8.0.0",
+    "@octokit/rest": "^20.0.2",
+    "sjcl": "^1.0.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.2",
+    "@types/sjcl": "^1.0.34",
+    "@vercel/ncc": "^0.38.1",
+    "ts-loader": "^9.6.2",
+    "tsx": "^4.23.13",
+    "typescript": "^5.9.2"
+  }
+}
