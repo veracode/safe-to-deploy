@@ -32094,43 +32094,36 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(7484));
 const github = __importStar(__nccwpck_require__(3228));
-const pull_1 = __nccwpck_require__(7104);
 const decision_service_1 = __nccwpck_require__(262);
+const github_services_1 = __nccwpck_require__(3706);
 async function run() {
     try {
         const vid = core.getInput("vid");
         const vkey = core.getInput("vkey");
+        const businessId = core.getInput("businessId");
+        const businessVersion = core.getInput("businessVersion");
+        const artifacts_list = core.getInput("artifacts_list");
+        const decision_mode = core.getInput("decision_mode");
         const token = core.getInput("github_token");
         const owner = core.getInput("repository_owner");
         const repo = core.getInput("repository_name");
-        const decision_mode = core.getInput("decision_mode");
         const branch = core.getInput("source_branch");
-        const businessId = core.getInput("businessId");
-        const businessVersion = core.getInput("businessVersion");
-        const repository = core.getInput("repository");
-        const artifacts_list = core.getInput("artifacts_list");
         const pull_number = core.getInput("pull_request");
-        const octokit = github.getOctokit(token);
-        console.log(JSON.stringify(pull_number));
         const eventName = github.context.eventName;
         console.log(eventName);
-        if (eventName === "pull_request") {
-            console.log("Triggered by Pull Request");
-            pull_1.Pull.setFn(core, octokit, owner, repo, branch, artifacts_list, repository, decision_mode, pull_number, businessId);
-        }
-        else if (eventName === "push" || eventName === "workflow_dispatch" || true) {
-            console.log("Triggered by Push");
-            const response = await (0, decision_service_1.getDecisionEvaluation)(vid, vkey, {
-                "type": "Deployment",
-                "target": "Prod",
-                "scope": [
-                    {
-                        "businessApplicationId": businessId,
-                        "businessApplicationVersion": businessVersion,
-                        "assetSnapshotIds": artifacts_list.split(",")
-                    }
-                ]
-            });
+        const decisionRequest = {
+            "type": "Deployment",
+            "target": "Prod",
+            "scope": [
+                {
+                    "businessApplicationId": businessId,
+                    "businessApplicationVersion": businessVersion,
+                    "assetSnapshotIds": artifacts_list.split(",")
+                }
+            ]
+        };
+        const response = await (0, decision_service_1.getDecisionEvaluation)(vid, vkey, decisionRequest);
+        if (eventName === "pull_request" || eventName === "push" || eventName === "workflow_dispatch") {
             let conclusion = "failure";
             let summary = "";
             if ('result' in response && response.result === "SAFE") {
@@ -32159,6 +32152,10 @@ async function run() {
                     console.log(`Veracode Deploy Decision Error: ${response.message}`);
                 }
             }
+            if (eventName === "pull_request" && pull_number && 'result' in response) {
+                const comment = (0, decision_service_1.generatePullRequestComment)(response);
+                await (0, github_services_1.addCommentToPullRequest)(github.getOctokit(token), { owner, repo, branch }, parseInt(pull_number), comment);
+            }
             core.setOutput("conclusion", conclusion);
             core.setOutput("summary", summary);
         }
@@ -32172,123 +32169,6 @@ run();
 
 /***/ }),
 
-/***/ 7104:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Pull = void 0;
-class Pull {
-    static async setFn(core, octokit, owner, repo, branch, artifacts_list, repository, decision_mode, pull_number, businessId) {
-        const branchObj = await octokit.request(`GET /repos/{owner}/{repo}/branches/{branch}`, { owner,
-            repo,
-            branch,
-            headers: {
-                'X-GitHub-Api-Version': '2026-03-10'
-            }
-        });
-        const sha = branchObj.data.commit?.sha;
-        const commits = await octokit.request(`GET /repos/{owner}/{repo}/commits/{sha}/check-runs`, { owner,
-            repo,
-            sha,
-            headers: {
-                'X-GitHub-Api-Version': '2026-03-10'
-            }
-        });
-        const check_run_id = commits.data.check_runs?.[0]?.id;
-        const checkRunResponse = await octokit.request(`GET /repos/{owner}/{repo}/check-runs/{check_run_id}`, {
-            owner,
-            repo,
-            check_run_id,
-            headers: {
-                'X-GitHub-Api-Version': '2026-03-10'
-            }
-        });
-        const requestBody = {
-            "type": "Deployment",
-            "target": "prod",
-            "scope": [
-                {
-                    "businessApplicationId": businessId,
-                    "businessApplicationVersion": "",
-                    "assetSnapshotIds": artifacts_list.split(",")
-                }
-            ]
-        };
-        const checkRunObj = checkRunResponse.data;
-        const response = await fetch("https://moocher-uproot-cobbler.ngrok-free.dev/api/v1/evaluate", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(requestBody)
-        });
-        let score;
-        let text = '';
-        const responseBody = await response.json();
-        if (responseBody.verdict === "SAFE") {
-            checkRunObj.output = {
-                title: "Veracode : Safe to Deploy !",
-                summary: `Artifacts List: ${artifacts_list}`,
-                text: `Repository: ${repository}\nArtifacts List: ${artifacts_list}`,
-                images: [
-                    {
-                        alt: "Safe to Deploy",
-                        caption: "Veracode Safe to Deploy",
-                        image_url: 'https://www.veracode.com/wp-content/uploads/2025/01/VER-Symbol-Full-Reversed.svg'
-                    }
-                ]
-            };
-            core.info("Veracode Deply Decision: Allow");
-            score = '95%';
-            text = 'Safe to deploy!';
-        }
-        else if (responseBody.verdict === "UNSAFE" && decision_mode === "observer") {
-            checkRunObj.output = {
-                title: "Warning! Unsafe to Deploy, Pipeline is in Observer Mode",
-                summary: `Artifacts List: ${artifacts_list}`,
-                text: `Repository: ${repository}\nArtifacts List: ${artifacts_list}`
-            };
-            core.info("Veracode Deply Decision: Observer Mode: Allow");
-            score = '95%';
-            text = 'Not Safe to deploy!';
-        }
-        else {
-            checkRunObj.output = {
-                title: "Blocking Deplyment! Unsafe to Deploy",
-                summary: `Artifacts List: ${artifacts_list}`,
-                text: `Repository: ${repository}\nArtifacts List: ${artifacts_list}`
-            };
-            core.setFailed("Veracode Deploy Decision: Deny");
-            score = '15%';
-            text = 'Blocking deployment!';
-        }
-        const comments = await octokit.rest.issues.createComment({
-            owner,
-            repo,
-            issue_number: pull_number,
-            body: `# ![Veracode](https://www.veracode.com/wp-content/themes/berg-theme-child/assets/images/favicon/favicon-32x32.png) ${text}
-                ## Veracode Trust Authority   ![95%](https://img.shields.io/badge/TRUST%20SCORE-${score}25-2ea44f)
-                The application was automatically approved deployment to a production environment because all the assets pass the required policy gate.`
-        });
-        JSON.stringify(comments);
-        const checkRun = await octokit.request(`PATCH /repos/{owner}/{repo}/check-runs/{check_run_id}`, {
-            owner,
-            repo,
-            check_run_id,
-            output: checkRunObj.output,
-            headers: {
-                'X-GitHub-Api-Version': '2026-03-10'
-            }
-        });
-    }
-}
-exports.Pull = Pull;
-
-
-/***/ }),
-
 /***/ 262:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -32296,10 +32176,75 @@ exports.Pull = Pull;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getDecisionEvaluation = getDecisionEvaluation;
+exports.generatePullRequestComment = generatePullRequestComment;
 const http_request_1 = __nccwpck_require__(7542);
 async function getDecisionEvaluation(vid, vkey, decisionRequest) {
     return await (0, http_request_1.postDecisionEvaluation)(vid, vkey, decisionRequest);
-    throw new Error("getDecisionEvaluation is not implemented");
+}
+function generatePullRequestComment(result) {
+    if (result.result === "SAFE") {
+        const score = "90%";
+        return `# ![Veracode](https://www.veracode.com/wp-content/themes/berg-theme-child/assets/images/favicon/favicon-32x32.png) Safe to Deploy\n## Veracode Trust Authority   ![95%](https://img.shields.io/badge/TRUST%20SCORE-${score}25-2ea44f)\nThe application was automatically approved deployment to a production environment because all the assets pass the required policy gate.`;
+    }
+    else if (result.result === "UNSAFE") {
+        const score = "10%";
+        return `# ![Veracode](https://www.veracode.com/wp-content/themes/berg-theme-child/assets/images/favicon/favicon-32x32.png) Unsafe to Deploy\n## Veracode Trust Authority   ![${score}%](https://img.shields.io/badge/TRUST%20SCORE-${score}25-red)\nThe application was automatically blocked from deployment to a production environment because one or more assets failed the required policy gate.`;
+    }
+    else {
+        const score = "10%";
+        return `# ![Veracode](https://www.veracode.com/wp-content/themes/berg-theme-child/assets/images/favicon/favicon-32x32.png) Error evaluating deployment\n## Veracode Trust Authority   ![${score}%](https://img.shields.io/badge/TRUST%20SCORE-${score}25-red)\nAn error occurred while evaluating the deployment decision. Please check the logs for more details.`;
+    }
+}
+
+
+/***/ }),
+
+/***/ 3706:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getbranchDetail = getbranchDetail;
+exports.getCommitCheckRuns = getCommitCheckRuns;
+exports.getCheckRunDetails = getCheckRunDetails;
+exports.addCommentToPullRequest = addCommentToPullRequest;
+async function getbranchDetail(octokit, owner, repo, branch) {
+    return await octokit.request(`GET /repos/{owner}/{repo}/branches/{branch}`, { owner,
+        repo,
+        branch,
+        headers: {
+            'X-GitHub-Api-Version': '2026-03-10'
+        }
+    });
+}
+async function getCommitCheckRuns(octokit, owner, repo, sha) {
+    return await octokit.request(`GET /repos/{owner}/{repo}/commits/{sha}/check-runs`, { owner,
+        repo,
+        sha,
+        headers: {
+            'X-GitHub-Api-Version': '2026-03-10'
+        }
+    });
+}
+async function getCheckRunDetails(octokit, owner, repo, check_run_id) {
+    return await octokit.request(`GET /repos/{owner}/{repo}/check-runs/{check_run_id}`, {
+        owner,
+        repo,
+        check_run_id,
+        headers: {
+            'X-GitHub-Api-Version': '2026-03-10'
+        }
+    });
+}
+async function addCommentToPullRequest(octokit, githubDetails, pull_number, comment) {
+    const { owner, repo } = githubDetails;
+    return await octokit.rest.issues.createComment({
+        owner,
+        repo,
+        issue_number: pull_number,
+        body: comment
+    });
 }
 
 

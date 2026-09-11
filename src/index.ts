@@ -1,34 +1,30 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import { Pull } from './pull';
-import { getDecisionEvaluation } from './services/decision-service';
+
+import { generatePullRequestComment, getDecisionEvaluation } from './services/decision-service';
+import { CreateDecisionRequest } from './namespaces/TrustAuthorityDecision';
+import { addCommentToPullRequest } from './services/github-services';
 
 
 async function run() {
    try {
         const vid = core.getInput("vid");
         const vkey = core.getInput("vkey");
+        const businessId = core.getInput("businessId");
+        const businessVersion = core.getInput("businessVersion");
+        const artifacts_list = core.getInput("artifacts_list");
+        const decision_mode = core.getInput("decision_mode");
+        
         const token = core.getInput("github_token");
         const owner = core.getInput("repository_owner");
         const repo = core.getInput("repository_name");
-        const decision_mode = core.getInput("decision_mode");
         const branch = core.getInput("source_branch");
-        const businessId = core.getInput("businessId");
-        const businessVersion = core.getInput("businessVersion");
-        const repository = core.getInput("repository");
-        const artifacts_list = core.getInput("artifacts_list");
         const pull_number = core.getInput("pull_request");
-        const octokit = github.getOctokit(token);
-        console.log(JSON.stringify(pull_number));
-        const eventName = github.context.eventName;
-        console.log(eventName);
-        if (eventName === "pull_request") {
-            console.log("Triggered by Pull Request");
-            Pull.setFn(core, octokit, owner, repo, branch, artifacts_list, repository, decision_mode, pull_number, businessId);
 
-        }else if (eventName === "push"  || eventName === "workflow_dispatch" || true) {
-            console.log("Triggered by Push");
-            const response = await getDecisionEvaluation(vid, vkey, {
+        const eventName = github.context.eventName;
+        
+        console.log(eventName);
+        const decisionRequest : CreateDecisionRequest = {
                 "type": "Deployment",
                 "target": "Prod",
                 "scope": [
@@ -38,9 +34,10 @@ async function run() {
                     "assetSnapshotIds": artifacts_list.split(",")
                     }
                 ]
-
-            });
-
+        };
+        const response = await getDecisionEvaluation(vid, vkey, decisionRequest);
+        if (eventName === "pull_request" || eventName === "push" || eventName === "workflow_dispatch") {
+            
             let conclusion = "failure";
             let summary = "";
 
@@ -66,6 +63,11 @@ async function run() {
                     core.setFailed(`Veracode Deploy Decision Error: ${response.message}`);
                     console.log(`Veracode Deploy Decision Error: ${response.message}`);
                 }
+            }
+            if(eventName === "pull_request" && pull_number && 'result' in response) {
+                const comment = generatePullRequestComment(response);
+                await addCommentToPullRequest(github.getOctokit(token), {owner, repo, branch}, parseInt(pull_number), comment);
+
             }
 
             core.setOutput("conclusion", conclusion);
