@@ -80,21 +80,21 @@ This action uses:
 GitHub Action (veracode/safe-to-deploy@vx.x.x)
       │
       ▼
- HTTP Request
+ Read Veracode.yaml
       │
       ▼
- Veracode API
+ Veracode Trust Decision Engine API
       │
       ▼
  Decision Response
       │
       ▼
- Evaluate Policy
+ Evaluate Policy (`observer` to allow unsafe deployments while recording the verdict, or `enforcement` to block unsafe deployments)
       │
    ┌──┴──┐
    ▼     ▼
 SAFE  UNSAFE
    │     │
    ▼     ▼
-Allow  Block / Observer
+Allow  Block 
 ```
