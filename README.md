@@ -80,9 +80,6 @@ This action uses:
 GitHub Action (veracode/safe-to-deploy@vx.x.x)
       │
       ▼
- Read Veracode.yaml
-      │
-      ▼
  Veracode Trust Decision Engine API
       │
       ▼
