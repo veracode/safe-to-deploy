@@ -98,7 +98,11 @@ async function run() {
                 } else if ('result' in response && response.result === "INDETERMINATE") {
                     conclusion = "failure";
                     summary = `INDETERMINATE (Decision could not be determined)\n\nThe deployment decision could not be determined for the following request:\n\nType: ${decisionRequest.type}\nTarget: ${decisionRequest.target}\nBusiness Application: ${businessId}\nVersion: ${businessVersion}\nArtifacts: ${artifacts_list}\nAsset Snapshot IDs: ${assetSnapshotIds.join(', ')}\nDecision ID: ${response.id}\nTimestamp: ${response.decisionTimestamp}\nMode: ${decision_mode}`;
-                    core.info(`Veracode Deploy Decision: Indeterminate - decision could not be determined for Business Application ${businessId} (Version: ${businessVersion}, Target: ${decisionRequest.target}, Asset Snapshot IDs: ${assetSnapshotIds.join(', ')})`);
+                    if(decision_mode === "observer"){
+                        core.info(`Veracode Deploy Decision: Indeterminate - decision could not be determined for Business Application ${businessId} (Version: ${businessVersion}, Target: ${decisionRequest.target}, Asset Snapshot IDs: ${assetSnapshotIds.join(', ')})`);
+                    }else{
+                        core.setFailed(`Veracode Deploy Decision: Indeterminate - decision could not be determined for Business Application ${businessId} (Version: ${businessVersion}, Target: ${decisionRequest.target}, Asset Snapshot IDs: ${assetSnapshotIds.join(', ')})`);
+                    }
 
                 }else if ('error' in response && response.status === 422) {
                     conclusion = "failure";
