@@ -47,6 +47,15 @@ export async function postRequest<T, B>(vid: string, vkey: string, resourceUri: 
       body: JSON.stringify(body),
     });
 
+    if (response.status === 401 || response.status === 403) {
+      return {
+        timestamp: new Date().toISOString(),
+        status: response.status,
+        error: response.status === 401 ? 'Unauthorized' : 'Forbidden',
+        message: 'Authorization failed: verify the Veracode API credentials (vid/vkey) and their permissions',
+      } as ErrorResponse;
+    }
+
     const data = await response.json();
     return data as T | ErrorResponse;
   } catch (error) {
@@ -85,6 +94,15 @@ export async function getRequestById<T>(vid: string, vkey: string, resourceUri: 
       method: 'GET',
       headers: headers
     });
+
+    if (response.status === 401 || response.status === 403) {
+      return {
+        timestamp: new Date().toISOString(),
+        status: response.status,
+        error: response.status === 401 ? 'Unauthorized' : 'Forbidden',
+        message: 'Authorization failed: verify the Veracode API credentials (vid/vkey) and their permissions',
+      } as ErrorResponse;
+    }
 
     const data = await response.json();
     return data as T | ErrorResponse;

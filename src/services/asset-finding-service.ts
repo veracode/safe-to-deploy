@@ -12,17 +12,34 @@ export async function getBusinessByName(vid: string, vkey: string, name: string)
     let responseObj = await getRequestById<{content: AssetGroupResponse[]}>(vid, vkey, appConfig.api.veracode.findingsUri, "/asset-groups" , [{key: "namePattern", value: name},{ key: "nameMatchType", value: "EXACT"}]);
 
     if ("content" in responseObj) {
+        if (!responseObj.content || responseObj.content.length === 0) {
+            return {
+                timestamp: new Date().toISOString(),
+                status: 404,
+                error: "Not Found",
+                message: `No business application found with name '${name}'`
+            } as ErrorResponse;
+        }
         return responseObj.content[0];
-    }else{
-         return {
-             message: "Error fetching business by name",
-             statusCode: 500,
-             error: "Internal Server Error",
-             details: "An error occurred while fetching the business by name."
-         } as unknown as ErrorResponse;
     }
 
-   
+    const errorBody = responseObj as any;
+    const errorStatus = Number(errorBody?.status ?? errorBody?.http_code ?? errorBody?._embedded?.errors?.[0]?.status);
+    if (errorStatus === 401 || errorStatus === 403) {
+        return {
+            timestamp: new Date().toISOString(),
+            status: errorStatus,
+            error: errorStatus === 401 ? "Unauthorized" : "Forbidden",
+            message: "Authorization failed: verify the Veracode API credentials (vid/vkey) and their permissions"
+        } as ErrorResponse;
+    }
+
+    return {
+        message: "Error fetching business by name",
+        statusCode: 500,
+        error: "Internal Server Error",
+        details: "An error occurred while fetching the business by name."
+    } as unknown as ErrorResponse;
 }
 
 export async function processArtifactsList(input: string, octokit: any): Promise<Array<{ name: string; tag?: string; commitHash?: string }>> {

@@ -37,7 +37,8 @@ async function run() {
                 core.info(`Business ID fetched successfully: ${businessIdResponse.id}`);
                 console.log(`Business ID fetched successfully: ${businessIdResponse.id}`);
             }else{
-                core.setFailed("Failed to fetch Business ID from Veracode for the given Business Name")
+                const reason = businessIdResponse && 'message' in businessIdResponse ? `: ${businessIdResponse.message}` : '';
+                core.setFailed(`Failed to fetch Business ID from Veracode for the given Business Name${reason}`)
                 return;
             }
         }else{
@@ -94,7 +95,12 @@ async function run() {
                     summary = `UNSAFE (Enforcement Mode - Blocked)\n\nBusiness Application: ${businessId}\nVersion: ${businessVersion}\nDecision ID: ${response.id}\nTimestamp: ${response.decisionTimestamp}\nMode: Enforcement`;
                     core.info("Veracode Deploy Decision: Deny Observer Mode: Allow");
                     
-                } else if ('error' in response) {
+                } else if ('result' in response && response.result === "INDETERMINATE") {
+                    conclusion = "failure";
+                    summary = `INDETERMINATE (Decision could not be determined)\n\nThe deployment decision could not be determined for the following request:\n\nType: ${decisionRequest.type}\nTarget: ${decisionRequest.target}\nBusiness Application: ${businessId}\nVersion: ${businessVersion}\nArtifacts: ${artifacts_list}\nAsset Snapshot IDs: ${assetSnapshotIds.join(', ')}\nDecision ID: ${response.id}\nTimestamp: ${response.decisionTimestamp}\nMode: ${decision_mode}`;
+                    core.info(`Veracode Deploy Decision: Indeterminate - decision could not be determined for Business Application ${businessId} (Version: ${businessVersion}, Target: ${decisionRequest.target}, Asset Snapshot IDs: ${assetSnapshotIds.join(', ')})`);
+
+                }else if ('error' in response) {
                     conclusion = "failure";
                     summary = `Error evaluating deployment\n\nError: ${response.message}\nStatus: ${response.status}\nTimestamp: ${response.timestamp}`;
                     if(decision_mode === "observer"){
