@@ -32176,6 +32176,18 @@ function buildQueryString(queryParams) {
         .join('&');
     return `?${params}`;
 }
+async function parseResponseBody(response) {
+    const text = await response.text();
+    if (response.status === 500 && !text.trim()) {
+        return {
+            timestamp: new Date().toISOString(),
+            status: response.status,
+            error: 'Internal Server Error',
+            message: 'Veracode returned an internal server error with no response body',
+        };
+    }
+    return JSON.parse(text);
+}
 async function postRequest(vid, vkey, resourceUri, resourceName, body) {
     let host = app_config_1.default.hostName.veracode.us;
     if (vid.startsWith('vera01ei-')) {
@@ -32210,8 +32222,7 @@ async function postRequest(vid, vkey, resourceUri, resourceName, body) {
                 message: 'Authorization failed: verify the Veracode API credentials (vid/vkey) and their permissions',
             };
         }
-        const data = await response.json();
-        return data;
+        return await parseResponseBody(response);
     }
     catch (error) {
         throw new Error(`Failed to post decision evaluation: ${error}`);
@@ -32251,8 +32262,7 @@ async function getRequestById(vid, vkey, resourceUri, resourceName, queryParams)
                 message: 'Authorization failed: verify the Veracode API credentials (vid/vkey) and their permissions',
             };
         }
-        const data = await response.json();
-        return data;
+        return await parseResponseBody(response);
     }
     catch (error) {
         throw new Error(`Failed to get decision evaluation: ${error}`);
@@ -32520,6 +32530,17 @@ async function run() {
                         core.setFailed(errorMessage);
                     }
                 }
+                else if ('error' in response && response.status === 500) {
+                    conclusion = "failure";
+                    summary = `Error evaluating deployment (Internal Server Error)\n\nError: ${response.message}\n\nThe Veracode service failed to process the request. Retry the workflow; if the problem persists, contact Veracode support with the details below:\n\nBusiness Application: ${businessId}\nVersion: ${businessVersion}\nAsset Snapshot IDs: ${assetSnapshotIds.join(', ')}\nStatus: ${response.status}\nTimestamp: ${response.timestamp}`;
+                    const errorMessage = `Veracode Deploy Decision Error: ${response.message} (Status: ${response.status}, Business Application: ${businessId})`;
+                    if (decision_mode === "observer") {
+                        core.info(errorMessage);
+                    }
+                    else {
+                        core.setFailed(errorMessage);
+                    }
+                }
                 else if ('error' in response) {
                     conclusion = "failure";
                     summary = `Error evaluating deployment\n\nError: ${response.message}\nStatus: ${response.status}\nTimestamp: ${response.timestamp}`;
@@ -32543,7 +32564,7 @@ async function run() {
                     core.info(`Veracode Deploy Decision Error: ${summary}`);
                 }
             }
-            if (eventName === "pull_request" && pull_number && ('result' in response || ('error' in response && [401, 403, 422].includes(response.status)))) {
+            if (eventName === "pull_request" && pull_number && ('result' in response || ('error' in response && [401, 403, 422, 500].includes(response.status)))) {
                 const comment = (0, decision_service_1.generatePullRequestComment)(response);
                 await (0, github_services_1.addCommentToPullRequest)(github.getOctokit(token), { owner, repo, branch }, parseInt(pull_number), comment);
             }
@@ -32673,6 +32694,10 @@ function generatePullRequestComment(result) {
         if (result.status === 401 || result.status === 403) {
             const score = "UNAUTHORIZED";
             return `# ![Veracode](https://www.veracode.com/wp-content/themes/berg-theme-child/assets/images/favicon/favicon-32x32.png) Authorization failed\n## Veracode Trust Authority   ![${score}%](https://img.shields.io/badge/Trust%20Decision-${score}-red)\nThe deployment decision could not be evaluated because the request was not authorized. Verify the Veracode API credentials (vid/vkey) and that they have permission to evaluate deployment decisions.\n\nStatus: ${result.status} ${result.error}\nTimestamp: ${result.timestamp}`;
+        }
+        if (result.status === 500) {
+            const score = "ERROR";
+            return `# ![Veracode](https://www.veracode.com/wp-content/themes/berg-theme-child/assets/images/favicon/favicon-32x32.png) Service error\n## Veracode Trust Authority   ![${score}%](https://img.shields.io/badge/Trust%20Decision-${score}-red)\nThe deployment decision could not be evaluated because the Veracode service returned an internal server error. Retry the workflow; if the problem persists, contact Veracode support.\n\nStatus: ${result.status} ${result.error}\nTimestamp: ${result.timestamp}`;
         }
         const score = "UNKNOWN";
         return `# ![Veracode](https://www.veracode.com/wp-content/themes/berg-theme-child/assets/images/favicon/favicon-32x32.png) Error evaluating\n## Veracode Trust Authority   ![${score}%](https://img.shields.io/badge/Trust%20Decision-${score}-orange)\nAn error occurred while evaluating the deployment decision. Please check the logs for more details.`;

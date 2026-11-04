@@ -17,6 +17,10 @@ export  function generatePullRequestComment(result:DecisionEvaluationResponse | 
             const score = "UNAUTHORIZED";
             return `# ![Veracode](https://www.veracode.com/wp-content/themes/berg-theme-child/assets/images/favicon/favicon-32x32.png) Authorization failed\n## Veracode Trust Authority   ![${score}%](https://img.shields.io/badge/Trust%20Decision-${score}-red)\nThe deployment decision could not be evaluated because the request was not authorized. Verify the Veracode API credentials (vid/vkey) and that they have permission to evaluate deployment decisions.\n\nStatus: ${result.status} ${result.error}\nTimestamp: ${result.timestamp}`;
         }
+        if(result.status === 500) {
+            const score = "ERROR";
+            return `# ![Veracode](https://www.veracode.com/wp-content/themes/berg-theme-child/assets/images/favicon/favicon-32x32.png) Service error\n## Veracode Trust Authority   ![${score}%](https://img.shields.io/badge/Trust%20Decision-${score}-red)\nThe deployment decision could not be evaluated because the Veracode service returned an internal server error. Retry the workflow; if the problem persists, contact Veracode support.\n\nStatus: ${result.status} ${result.error}\nTimestamp: ${result.timestamp}`;
+        }
         const score = "UNKNOWN";
         return `# ![Veracode](https://www.veracode.com/wp-content/themes/berg-theme-child/assets/images/favicon/favicon-32x32.png) Error evaluating\n## Veracode Trust Authority   ![${score}%](https://img.shields.io/badge/Trust%20Decision-${score}-orange)\nAn error occurred while evaluating the deployment decision. Please check the logs for more details.`;
     }

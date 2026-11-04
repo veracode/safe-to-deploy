@@ -113,6 +113,15 @@ async function run() {
                     }else{
                         core.setFailed(errorMessage);
                     }
+                }else if ('error' in response && response.status === 500) {
+                    conclusion = "failure";
+                    summary = `Error evaluating deployment (Internal Server Error)\n\nError: ${response.message}\n\nThe Veracode service failed to process the request. Retry the workflow; if the problem persists, contact Veracode support with the details below:\n\nBusiness Application: ${businessId}\nVersion: ${businessVersion}\nAsset Snapshot IDs: ${assetSnapshotIds.join(', ')}\nStatus: ${response.status}\nTimestamp: ${response.timestamp}`;
+                    const errorMessage = `Veracode Deploy Decision Error: ${response.message} (Status: ${response.status}, Business Application: ${businessId})`;
+                    if(decision_mode === "observer"){
+                        core.info(errorMessage);
+                    }else{
+                        core.setFailed(errorMessage);
+                    }
                 }else if ('error' in response) {
                     conclusion = "failure";
                     summary = `Error evaluating deployment\n\nError: ${response.message}\nStatus: ${response.status}\nTimestamp: ${response.timestamp}`;
@@ -133,7 +142,7 @@ async function run() {
                     core.info(`Veracode Deploy Decision Error: ${summary}`);
                 }
             }
-            if(eventName === "pull_request" && pull_number && ('result' in response || ('error' in response && [401, 403, 422].includes(response.status)))) {
+            if(eventName === "pull_request" && pull_number && ('result' in response || ('error' in response && [401, 403, 422, 500].includes(response.status)))) {
                 const comment = generatePullRequestComment(response);
                 await addCommentToPullRequest(github.getOctokit(token), {owner, repo, branch}, parseInt(pull_number), comment);
 
