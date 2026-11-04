@@ -37,7 +37,8 @@ async function run() {
                 core.info(`Business ID fetched successfully: ${businessIdResponse.id}`);
                 console.log(`Business ID fetched successfully: ${businessIdResponse.id}`);
             }else{
-                core.setFailed("Failed to fetch Business ID from Veracode for the given Business Name")
+                const reason = businessIdResponse && 'message' in businessIdResponse ? `: ${businessIdResponse.message}` : '';
+                core.setFailed(`Failed to fetch Business ID from Veracode for the given Business Name${reason}`)
                 return;
             }
         }else{
@@ -94,7 +95,34 @@ async function run() {
                     summary = `UNSAFE (Enforcement Mode - Blocked)\n\nBusiness Application: ${businessId}\nVersion: ${businessVersion}\nDecision ID: ${response.id}\nTimestamp: ${response.decisionTimestamp}\nMode: Enforcement`;
                     core.info("Veracode Deploy Decision: Deny Observer Mode: Allow");
                     
-                } else if ('error' in response) {
+                } else if ('result' in response && response.result === "INDETERMINATE") {
+                    conclusion = "failure";
+                    summary = `INDETERMINATE (Decision could not be determined)\n\nThe deployment decision could not be determined for the following request:\n\nType: ${decisionRequest.type}\nTarget: ${decisionRequest.target}\nBusiness Application: ${businessId}\nVersion: ${businessVersion}\nArtifacts: ${artifacts_list}\nAsset Snapshot IDs: ${assetSnapshotIds.join(', ')}\nDecision ID: ${response.id}\nTimestamp: ${response.decisionTimestamp}\nMode: ${decision_mode}`;
+                    if(decision_mode === "observer"){
+                        core.info(`Veracode Deploy Decision: Indeterminate - decision could not be determined for Business Application ${businessId} (Version: ${businessVersion}, Target: ${decisionRequest.target}, Asset Snapshot IDs: ${assetSnapshotIds.join(', ')})`);
+                    }else{
+                        core.setFailed(`Veracode Deploy Decision: Indeterminate - decision could not be determined for Business Application ${businessId} (Version: ${businessVersion}, Target: ${decisionRequest.target}, Asset Snapshot IDs: ${assetSnapshotIds.join(', ')})`);
+                    }
+
+                }else if ('error' in response && response.status === 422) {
+                    conclusion = "failure";
+                    summary = `Error evaluating deployment (Unprocessable Content)\n\nError: ${response.message}\n\nVerify that the artifacts have been scanned and their asset snapshots belong to the requested business application:\n\nBusiness Application: ${businessId}\nVersion: ${businessVersion}\nArtifacts: ${artifacts_list}\nAsset Snapshot IDs: ${assetSnapshotIds.join(', ')}\nStatus: ${response.status}\nTimestamp: ${response.timestamp}`;
+                    const errorMessage = `Veracode Deploy Decision Error: ${response.message} (Business Application: ${businessId}, Asset Snapshot IDs: ${assetSnapshotIds.join(', ')})`;
+                    if(decision_mode === "observer"){
+                        core.info(errorMessage);
+                    }else{
+                        core.setFailed(errorMessage);
+                    }
+                }else if ('error' in response && response.status === 500) {
+                    conclusion = "failure";
+                    summary = `Error evaluating deployment (Internal Server Error)\n\nError: ${response.message}\n\nThe Veracode service failed to process the request. Retry the workflow; if the problem persists, contact Veracode support with the details below:\n\nBusiness Application: ${businessId}\nVersion: ${businessVersion}\nAsset Snapshot IDs: ${assetSnapshotIds.join(', ')}\nStatus: ${response.status}\nTimestamp: ${response.timestamp}`;
+                    const errorMessage = `Veracode Deploy Decision Error: ${response.message} (Status: ${response.status}, Business Application: ${businessId})`;
+                    if(decision_mode === "observer"){
+                        core.info(errorMessage);
+                    }else{
+                        core.setFailed(errorMessage);
+                    }
+                }else if ('error' in response) {
                     conclusion = "failure";
                     summary = `Error evaluating deployment\n\nError: ${response.message}\nStatus: ${response.status}\nTimestamp: ${response.timestamp}`;
                     if(decision_mode === "observer"){
@@ -114,7 +142,7 @@ async function run() {
                     core.info(`Veracode Deploy Decision Error: ${summary}`);
                 }
             }
-            if(eventName === "pull_request" && pull_number && 'result' in response) {
+            if(eventName === "pull_request" && pull_number && ('result' in response || ('error' in response && [401, 403, 422, 500].includes(response.status)))) {
                 const comment = generatePullRequestComment(response);
                 await addCommentToPullRequest(github.getOctokit(token), {owner, repo, branch}, parseInt(pull_number), comment);
 
