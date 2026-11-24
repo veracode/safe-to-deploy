@@ -11,12 +11,10 @@
   "dependencies": {
     "@actions/core": "^3.0.1",
     "@actions/github": "^9.1.1",
-    "@octokit/rest": "^22.0.1",
-    "sjcl": "^1.0.8"
+    "@octokit/rest": "^22.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.20.2",
-    "@types/sjcl": "^1.0.34",
     "@vercel/ncc": "^0.38.1",
     "ts-loader": "^9.6.2",
     "tsx": "^4.23.13",

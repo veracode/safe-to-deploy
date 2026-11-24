@@ -1,4 +1,3 @@
-import sjcl from 'sjcl';
 import * as crypto from 'crypto';
 
 interface AuthorizationHeaderParams {
@@ -14,11 +13,7 @@ const requestVersion = 'vcode_request_version_1';
 const nonceSize = 16;
 
 function computeHashHex(message: string, key_hex: string): string {
-  const key_bits = sjcl.codec.hex.toBits(key_hex);
-  const message_bits = sjcl.codec.utf8String.toBits(message);
-  const hmac_bits = new sjcl.misc.hmac(key_bits, sjcl.hash.sha256).mac(message_bits);
-  const hmac = sjcl.codec.hex.fromBits(hmac_bits);
-  return hmac;
+  return crypto.createHmac('sha256', Buffer.from(key_hex, 'hex')).update(message, 'utf8').digest('hex');
 }
 
 function calulateDataSignature(apiKeyBytes: string, nonceBytes: string, dateStamp: string, data: string): string {
@@ -34,7 +29,7 @@ function newNonce(): string {
 }
 
 function toHexBinary(input: string): string {
-  return sjcl.codec.hex.fromBits(sjcl.codec.utf8String.toBits(input));
+  return Buffer.from(input, 'utf8').toString('hex');
 }
 
 export function calculateAuthorizationHeader(params: AuthorizationHeaderParams): string {
