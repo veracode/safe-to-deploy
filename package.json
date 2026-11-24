@@ -1,6 +1,6 @@
 {
   "name": "safe-to-deploy",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Github Action to evaluate - Is it safe to deploy today? — a single, policy-grounded answer at every deployment gate, with an immutable audit trail.",
   "main": "index.ts",
   "scripts": {
@@ -9,9 +9,9 @@
     "debug": "node --inspect-brk=9229 --enable-source-maps node_modules/tsx/dist/cli.mjs src/index.ts"
   },
   "dependencies": {
-    "@actions/core": "^2.0.1",
-    "@actions/github": "^8.0.0",
-    "@octokit/rest": "^20.0.2",
+    "@actions/core": "^3.0.1",
+    "@actions/github": "^9.1.1",
+    "@octokit/rest": "^22.0.1",
     "sjcl": "^1.0.8"
   },
   "devDependencies": {
