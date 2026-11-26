@@ -15,6 +15,19 @@ function buildQueryString(queryParams: Array<{key: string, value: string}>): str
   return `?${params}`;
 }
 
+async function parseResponseBody<T>(response: Response): Promise<T | ErrorResponse> {
+  const text = await response.text();
+  if (response.status === 500 && !text.trim()) {
+    return {
+      timestamp: new Date().toISOString(),
+      status: response.status,
+      error: 'Internal Server Error',
+      message: 'Veracode returned an internal server error with no response body',
+    } as ErrorResponse;
+  }
+  return JSON.parse(text) as T | ErrorResponse;
+}
+
 export async function postRequest<T, B>(vid: string, vkey: string, resourceUri: string, resourceName: string, body: B): Promise<T | ErrorResponse> {
   
   let host = appConfig.hostName.veracode.us;
@@ -47,8 +60,16 @@ export async function postRequest<T, B>(vid: string, vkey: string, resourceUri: 
       body: JSON.stringify(body),
     });
 
-    const data = await response.json();
-    return data as T | ErrorResponse;
+    if (response.status === 401 || response.status === 403) {
+      return {
+        timestamp: new Date().toISOString(),
+        status: response.status,
+        error: response.status === 401 ? 'Unauthorized' : 'Forbidden',
+        message: 'Authorization failed: verify the Veracode API credentials (vid/vkey) and their permissions',
+      } as ErrorResponse;
+    }
+
+    return await parseResponseBody<T>(response);
   } catch (error) {
     throw new Error(`Failed to post decision evaluation: ${error}`);
   }
@@ -86,8 +107,16 @@ export async function getRequestById<T>(vid: string, vkey: string, resourceUri: 
       headers: headers
     });
 
-    const data = await response.json();
-    return data as T | ErrorResponse;
+    if (response.status === 401 || response.status === 403) {
+      return {
+        timestamp: new Date().toISOString(),
+        status: response.status,
+        error: response.status === 401 ? 'Unauthorized' : 'Forbidden',
+        message: 'Authorization failed: verify the Veracode API credentials (vid/vkey) and their permissions',
+      } as ErrorResponse;
+    }
+
+    return await parseResponseBody<T>(response);
   } catch (error) {
     throw new Error(`Failed to get decision evaluation: ${error}`);
   }
